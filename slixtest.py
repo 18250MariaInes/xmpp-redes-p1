@@ -12,13 +12,14 @@ class SendMsgBot(slixmpp.ClientXMPP):
     and then log out.
     """
 
-    def __init__(self, jid, password, recipient, message):
+    def __init__(self, jid, password, recipient, message, task):
         slixmpp.ClientXMPP.__init__(self, jid, password)
 
         # The message we wish to send, and the JID that
         # will receive it.
         self.recipient = recipient
         self.msg = message
+        self.task = task
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -40,19 +41,23 @@ class SendMsgBot(slixmpp.ClientXMPP):
                      event does not provide any additional
                      data.
         """
-        self.send_presence()
-        await self.get_roster()
+        if (task == "1"):
+            print("ENTRA************")
+            self.send_presence()
+            await self.get_roster()
 
-        self.send_message(mto=self.recipient,
-                          mbody=self.msg,
-                          mtype='chat')
+            self.send_message(mto=self.recipient,
+                            mbody=self.msg,
+                            mtype='chat')
 
-        self.disconnect()
+            self.disconnect()
+        elif (task == "2"):
+            print("HIZO ESTA COSA")
 
 
 if __name__ == '__main__':
     # Setup the command line arguments.
-    parser = ArgumentParser(description=SendMsgBot.__doc__)
+    """parser = ArgumentParser(description=SendMsgBot.__doc__)
 
     # Output verbosity options.
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
@@ -71,6 +76,7 @@ if __name__ == '__main__':
                         help="JID to send the message to")
     parser.add_argument("-m", "--message", dest="message",
                         help="message to send")
+    
 
     args = parser.parse_args()
 
@@ -86,11 +92,19 @@ if __name__ == '__main__':
         args.to = input("Send To: ")
     if args.message is None:
         args.message = input("Message: ")
+    if args.task is None:
+        args.task = input("task: ")"""
+
+    jid = input("Username: ")
+    password = getpass("Password: ")
+    to = input("Send To: ")
+    message = input("Message: ")
+    task = input("task: ")
 
     # Setup the EchoBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp = SendMsgBot(args.jid, args.password, args.to, args.message)
+    xmpp = SendMsgBot(jid, password, to, message, task)
     xmpp.register_plugin('xep_0030') # Service Discovery
     xmpp.register_plugin('xep_0199') # XMPP Ping
 
