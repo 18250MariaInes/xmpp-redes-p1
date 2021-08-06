@@ -55,28 +55,12 @@ class SendMsgBot(slixmpp.ClientXMPP):
         print(self.boundjid.bare)
         users['type'] = 'get'
         users['to'] = 'alumchat.xyz'
-        users['from'] = self.boundjid.bare
+        users['from'] = 'mvasquez@alumchat.xyz/pda'
         users['id'] = 'search_result'
         print(users)
-        itemStanza = ET.fromstring("<query xmlns='jabber:iq:roster'>\
-                                 <x xmlns='jabber:x:data' type='submit'>\
-                                    <field type='hidden' var='FORM_TYPE'>\
-                                        <value>jabber:iq:roster</value>\
-                                    </field>\
-                                    <field var='Username'>\
-                                        <value>1</value>\
-                                    </field>\
-                                    <field var='search'>\
-                                        <value>*</value>\
-                                    </field>\
-                                    <field var='Name'>\
-                                        <value>1</value>\
-                                    </field>\
-                                    <field var='Email'>\
-                                        <value>1</value>\
-                                    </field>\
-                                </x>\
-                                </query>")
+        itemStanza = ET.fromstring("<command xmlns='http://jabber.org/protocol/commands'"
+           "action='execute'"
+           "node='http://jabber.org/protocol/admin#get-registered-users-list'/>")
         print("CREA STANZA")
         users.append(itemStanza)
         print(users)

@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 import slixmpp
 
-
+#MANDAR MENSAJES
 class SendMsgBot(slixmpp.ClientXMPP):
 
     """

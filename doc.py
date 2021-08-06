@@ -1,27 +1,33 @@
-"""
-    Slixmpp: The Slick XMPP Library
-    Copyright (C) 2010  Nathanael C. Fritz
-    This file is part of Slixmpp.
+#!/usr/bin/env python3
 
-    See the file LICENSE for copying permission.
-"""
-#RECIBIR MENSAJES
+# Slixmpp: The Slick XMPP Library
+# Copyright (C) 2010  Nathanael C. Fritz
+# This file is part of Slixmpp.
+# See the file LICENSE for copying permission.
+
 import logging
 from getpass import getpass
 from argparse import ArgumentParser
 
 import slixmpp
+from slixmpp import Iq
+from slixmpp.exceptions import XMPPError
+from slixmpp.xmlstream import register_stanza_plugin
+
+from stanza import Action
 
 
-class EchoBot(slixmpp.ClientXMPP):
+class ActionUserBot(slixmpp.ClientXMPP):
 
     """
-    A simple Slixmpp bot that will echo messages it
-    receives, along with a short thank you message.
+    A simple Slixmpp bot that sends a custom action stanza
+    to another client.
     """
 
-    def __init__(self, jid, password):
+    def __init__(self, jid, password, other):
         slixmpp.ClientXMPP.__init__(self, jid, password)
+
+        self.action_provider = other
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -29,48 +35,65 @@ class EchoBot(slixmpp.ClientXMPP):
         # listen for this event so that we we can initialize
         # our roster.
         self.add_event_handler("session_start", self.start)
-
-        # The message event is triggered whenever a message
-        # stanza is received. Be aware that that includes
-        # MUC messages and error messages.
         self.add_event_handler("message", self.message)
+
+        register_stanza_plugin(Iq, Action)
 
     async def start(self, event):
         """
         Process the session_start event.
-
         Typical actions for the session_start event are
         requesting the roster and broadcasting an initial
         presence stanza.
-
         Arguments:
             event -- An empty dictionary. The session_start
                      event does not provide any additional
                      data.
         """
+        print("ANTES 1")
         self.send_presence()
+        print("ANTES 2")
         await self.get_roster()
+        print("ANTES 3")
+        await self.send_custom_iq()
+
+    async def send_custom_iq(self):
+        """Create and send two custom actions.
+        If the first action was successful, then send
+        a shutdown command and then disconnect.
+        """
+        iq = self.Iq()
+        iq['to'] = self.action_provider
+        iq['type'] = 'set'
+        iq['action']['method'] = 'is_prime'
+        iq['action']['param'] = '2'
+        print(iq)
+
+        try:
+            resp = await iq.send()
+            if resp['action']['status'] == 'done':
+                #sending bye
+                iq2 = self.Iq()
+                iq2['to'] = self.action_provider
+                iq2['type'] = 'set'
+                iq2['action']['method'] = 'bye'
+                await iq2.send()
+
+                self.disconnect()
+        except XMPPError:
+            print('There was an error sending the custom action.')
 
     def message(self, msg):
         """
-        Process incoming message stanzas. Be aware that this also
-        includes MUC messages and error messages. It is usually
-        a good idea to check the messages's type before processing
-        or sending replies.
-
+        Process incoming message stanzas.
         Arguments:
-            msg -- The received message stanza. See the documentation
-                   for stanza objects and the Message stanza to see
-                   how it may be used.
+            msg -- The received message stanza.
         """
-        print(msg)
-        if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending\n%(body)s" % msg).send()
-
+        logging.info(msg['body'])
 
 if __name__ == '__main__':
     # Setup the command line arguments.
-    parser = ArgumentParser(description=EchoBot.__doc__)
+    parser = ArgumentParser()
 
     # Output verbosity options.
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
@@ -85,6 +108,8 @@ if __name__ == '__main__':
                         help="JID to use")
     parser.add_argument("-p", "--password", dest="password",
                         help="password to use")
+    parser.add_argument("-o", "--other", dest="other",
+                        help="JID providing custom stanza")
 
     args = parser.parse_args()
 
@@ -96,15 +121,17 @@ if __name__ == '__main__':
         args.jid = input("Username: ")
     if args.password is None:
         args.password = getpass("Password: ")
+    if args.other is None:
+        args.other = input("JID Providing custom stanza: ")
 
-    # Setup the EchoBot and register plugins. Note that while plugins may
+    # Setup the CommandBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-    xmpp = EchoBot(args.jid, args.password)
+    
+    xmpp = ActionUserBot(args.jid, args.password, args.other)
     xmpp.register_plugin('xep_0030') # Service Discovery
     xmpp.register_plugin('xep_0004') # Data Forms
-    xmpp.register_plugin('xep_0060') # PubSub
-    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0050') # Adhoc Commands
 
     # Connect to the XMPP server and start processing XMPP stanzas.
     xmpp.connect()
