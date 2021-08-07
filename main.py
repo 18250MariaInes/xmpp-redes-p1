@@ -4,7 +4,7 @@ Redes
 Proyecto 1"""
 import sys
 import aiodns
-import asyncio
+#import asyncio
 import logging
 import xmpp
 from slixmpp.xmlstream import StanzaBase, ET
@@ -19,12 +19,12 @@ from slixmpp import ClientXMPP
 
 class EchoBot(ClientXMPP, BasePlugin):
 
-    def __init__(self, jid, password, task, recipient ="", message=""):
+    def __init__(self, jid, password, actionSelected, recipient ="", msg=""):
         ClientXMPP.__init__(self, jid, password)
         
         self.recipient = recipient
-        self.msg = message
-        self.task = task
+        self.msg = msg
+        self.actionSelected = actionSelected
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -33,15 +33,20 @@ class EchoBot(ClientXMPP, BasePlugin):
         # our roster.
         self.add_event_handler("session_start", self.start)
 
+        if (actionSelected == "3"):
+            self.add_event_handler("message", self.message)
+
+
 
 
     async def start(self, event):
         
-        if (self.task == "1"):
-            self.send_presence('chat', 'Ha llegado la colocha!')
+        if (self.actionSelected == "1" or self.actionSelected == "3"):
+            #self.send_presence('chat', 'Ha llegado la colocha!')
+            self.send_presence()
             await self.get_roster()
             self.disconnect()
-        elif (self.task == "2"):
+        elif (self.actionSelected == "2"):
             self.send_presence()
             await self.get_roster()
             self.send_message(mto=self.recipient,
@@ -52,10 +57,13 @@ class EchoBot(ClientXMPP, BasePlugin):
         
 
     def message(self, msg):
-        print("........................")
-        print(msg["from"])
-        if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending\n%(body)s" % msg).send()
+        #while (reply != "block"):
+        print(str(msg['from'])+">>> "+str(msg['body']))
+        reply = input("Respuesta>>> ")
+        """if (reply == "block"):
+            return True"""
+        msg.reply(reply).send()
+        #msg.reply("Thanks for sending\n%(body)s" % msg).send()
 
     def wait_for_presences(self, pres):
         print("************")
@@ -165,10 +173,39 @@ def mandarMensaje(userName,mssg):
     xmpp.connect()
     xmpp.process(timeout = 5)# XMPP Ping
 
+def chat ():
+    xmpp = EchoBot(user, psswrd, "3")
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    xmpp.register_plugin('xep_0004') # Data Forms
+    xmpp.register_plugin('xep_0060') # PubSub
+    xmpp.register_plugin('xep_0199')
+    xmpp.connect()
+    xmpp.process()# XMPP Ping
+
 
 if __name__ == '__main__':
-    # Ideally use optparse or argparse to get JID,
-    # password, and log level.
+    # Setup the command line arguments.
+    parser = ArgumentParser(description=EchoBot.__doc__)
+
+    # Output verbosity options.
+    parser.add_argument("-q", "--quiet", help="set logging to ERROR",
+                        action="store_const", dest="loglevel",
+                        const=logging.ERROR, default=logging.INFO)
+    parser.add_argument("-d", "--debug", help="set logging to DEBUG",
+                        action="store_const", dest="loglevel",
+                        const=logging.DEBUG, default=logging.INFO)
+
+    # JID and password options.
+    parser.add_argument("-j", "--jid", dest="jid",
+                        help="JID to use")
+    parser.add_argument("-p", "--password", dest="password",
+                        help="password to use")
+
+    args = parser.parse_args()
+
+    # Setup logging.
+    logging.basicConfig(level=args.loglevel,
+                        format='%(levelname)-8s %(message)s')
     cliente = None
     user = ""
     psswrd = ""
@@ -181,7 +218,7 @@ if __name__ == '__main__':
                         d: Delete Account
                         e: Show ALL users and info about them
                         f: ENVIAR MENSAJE
-                        g: RECIBIR MENSAJE
+                        g: CHAT
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -211,4 +248,7 @@ if __name__ == '__main__':
             userName = input("Destinatario (name@alumchat.xyz)>>> ")
             mssg = input("Mensaje>>> ")
             mandarMensaje(userName,mssg)
+        elif (opcion == "g"):
+            chat()
+
             

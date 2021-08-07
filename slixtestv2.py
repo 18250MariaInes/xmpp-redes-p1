@@ -63,9 +63,11 @@ class EchoBot(slixmpp.ClientXMPP):
                    for stanza objects and the Message stanza to see
                    how it may be used.
         """
-        print(msg)
-        if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending\n%(body)s" % msg).send()
+        print(str(msg['from'])+">>> "+str(msg['body']))
+        reply = input("Respuesta>>> ")
+        """if msg['type'] in ('chat', 'normal'):
+            msg.reply("Thanks for sending\n%(body)s" % msg).send()"""
+        msg.reply(reply).send()
 
 
 if __name__ == '__main__':
