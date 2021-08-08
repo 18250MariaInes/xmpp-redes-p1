@@ -5,6 +5,7 @@ Proyecto 1"""
 import sys
 import aiodns
 #import asyncio
+import threading
 import logging
 import xmpp
 from slixmpp.xmlstream import StanzaBase, ET
@@ -19,7 +20,7 @@ from slixmpp import ClientXMPP
 
 class EchoBot(ClientXMPP, BasePlugin):
 
-    def __init__(self, jid, password, actionSelected, recipient ="", msg=""):
+    def __init__(self, jid, password, actionSelected, recipient ="", msg="", user=None, show=True):
         ClientXMPP.__init__(self, jid, password)
         
         self.recipient = recipient
@@ -31,18 +32,40 @@ class EchoBot(ClientXMPP, BasePlugin):
         # and the XML streams are ready for use. We want to
         # listen for this event so that we we can initialize
         # our roster.
+
+        if (actionSelected == "4" or actionSelected == "5"):
+            print("ENTRA A SHOWCONTACTS")
+            #self.add_event_handler("contacts", self.contacts)
+            self.presences = threading.Event()
+            self.contacts = []
+            self.user = user
+            self.show = show
+            self.message = msg
+
+        """if (actionSelected == "5"):
+            print("ENTRA A SHOW-CONTACT")
+            self.add_event_handler("contacts", self.contacts)
+            self.presences = threading.Event()
+            self.contacts = []
+            self.user = user
+            self.show = show
+            self.message = msg"""
+
         self.add_event_handler("session_start", self.start)
 
         if (actionSelected == "3"):
             self.add_event_handler("message", self.message)
+        
+        
 
 
 
 
     async def start(self, event):
         
-        if (self.actionSelected == "1" or self.actionSelected == "3"):
+        if (self.actionSelected == "1"):
             #self.send_presence('chat', 'Ha llegado la colocha!')
+            print("ENTRO AQUI IGUAL")
             self.send_presence()
             await self.get_roster()
             self.disconnect()
@@ -53,7 +76,75 @@ class EchoBot(ClientXMPP, BasePlugin):
                             mbody=self.msg,
                             mtype='chat')
             self.disconnect()
-        
+        elif (self.actionSelected == "3"):
+            #self.send_presence('chat', 'Ha llegado la colocha!')
+            print("CHAT PRIVADO DE COMUNICACIÓN")
+            self.send_presence()
+            await self.get_roster()
+            print(str(msg['from'])+">>> "+str(msg['body']))
+            reply = input("Respuesta>>> ")
+            if (reply == "block"):
+                self.disconnect()
+            else:
+                msg.reply(reply).send()
+            
+        elif (self.actionSelected == "4" or self.actionSelected == "5"):
+            self.send_presence()
+            await self.get_roster()
+            my_contacts = []
+            try:
+                self.get_roster()
+            except IqError as e:
+                print("ALGO MALO PASÓ MANO", e)
+            except IqTimeout:
+                print("LA SEÑAL CAYÓ HORRIBLE MANO")
+            self.presences.wait(3)
+            my_roster = self.client_roster.groups()
+            for group in my_roster:
+                for user in my_roster[group]:
+                    status = show = answer = priority = ''
+                    self.contacts.append(user)
+                    subs = self.client_roster[user]['subscription']
+                    conexions = self.client_roster.presence(user)
+                    username = self.client_roster[user]['name'] 
+                    for answer, pres in conexions.items():
+                        if pres['show']:
+                            show = pres['show']
+                        if pres['status']:
+                            status = pres['status']
+                        if pres['priority']:
+                            status = pres['priority']
+
+                    my_contacts.append([
+                        user,
+                        subs,
+                        status,
+                        username,
+                        priority
+                    ])
+                    self.contacts = my_contacts
+
+            if(self.show):
+                if(not self.user):
+                    if len(my_contacts)==0:
+                        print('NO TIENES AMIGOS')
+                    else:
+                        print("CARGANDO TODOS LOS CONTACTOS")
+                        print('\n CONTACTOS: \n')
+                    for contact in my_contacts:
+                        print('USUARIO:' + str(contact[0]) + '\tSUBSCRIPTION:' + str(contact[1]) )
+                else:
+                    print('\n\n')
+                    print("CARGANDO CONTACTO SELECCIONADO")
+                    for contact in my_contacts:
+                        if(contact[0]==self .user):
+                            print('USUARIO:' + str(contact[0]) + '\tSUBSCRIPTION:' + str(contact[1]) + '\n\tSTATUS:'  + '\n\tUSERNAME:' + str(contact[3]) + '\n\tPRIORITY:' + str(contact[4]))
+            else:
+                for JID in self.contacts:
+                    self.notification_(JID, self.message, 'active')
+
+            self.disconnect()
+            print('\n\n')
         
 
     def message(self, msg):
@@ -182,10 +273,29 @@ def chat ():
     xmpp.connect()
     xmpp.process()# XMPP Ping
 
+def showUsers ():
+    xmpp = EchoBot(user, psswrd, "4")
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0045') # Mulit-User Chat (MUC)
+    xmpp.register_plugin('xep_0096') # Jabber Search
+    xmpp.connect()
+    xmpp.process(forever=False)
+
+def showUser ():
+    contact = input("Usuario de interés (name@alumchat.xyz)>>> ") 
+    xmpp = EchoBot(user, psswrd, "4", user = contact)
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0045') # Mulit-User Chat (MUC)
+    xmpp.register_plugin('xep_0096') # Jabber Search
+    xmpp.connect()
+    xmpp.process(forever=False)
+
 
 if __name__ == '__main__':
     # Setup the command line arguments.
-    parser = ArgumentParser(description=EchoBot.__doc__)
+    """parser = ArgumentParser(description=EchoBot.__doc__)
 
     # Output verbosity options.
     parser.add_argument("-q", "--quiet", help="set logging to ERROR",
@@ -205,20 +315,21 @@ if __name__ == '__main__':
 
     # Setup logging.
     logging.basicConfig(level=args.loglevel,
-                        format='%(levelname)-8s %(message)s')
+                        format='%(levelname)-8s %(message)s')"""
     cliente = None
     user = ""
     psswrd = ""
     opcion = "Z"
     while opcion != "s":
         opcion = input("""
-                        a: Create account
-                        b: Log In
-                        c: Log Out
-                        d: Delete Account
-                        e: Show ALL users and info about them
+                        a: CREAR CUENTA
+                        b: INICIO SESIÓN
+                        c: CERRAR SESIÓN
+                        d: ELIMINAR CUENTA
+                        e: MOSTRAR TODOS MIS CONTACTOS
                         f: ENVIAR MENSAJE
                         g: CHAT
+                        h: MOSTRAR INFO DE UN CONTACTO
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -250,5 +361,9 @@ if __name__ == '__main__':
             mandarMensaje(userName,mssg)
         elif (opcion == "g"):
             chat()
+        elif (opcion == "e"):
+            showUsers()
+        elif (opcion == "h"):
+            showUser()
 
             
