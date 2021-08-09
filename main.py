@@ -32,9 +32,9 @@ class EchoBot(ClientXMPP, BasePlugin):
         # and the XML streams are ready for use. We want to
         # listen for this event so that we we can initialize
         # our roster.
-
+        print("----------------"+actionSelected)
         if (actionSelected == "4" or actionSelected == "5"):
-            print("ENTRA A SHOWCONTACTS")
+            print("CARGANDO TODOS LOS CONTACTOS")
             #self.add_event_handler("contacts", self.contacts)
             self.presences = threading.Event()
             self.contacts = []
@@ -56,11 +56,6 @@ class EchoBot(ClientXMPP, BasePlugin):
         if (actionSelected == "3"):
             self.add_event_handler("message", self.message)
         
-        
-
-
-
-
     async def start(self, event):
         
         if (self.actionSelected == "1"):
@@ -129,20 +124,38 @@ class EchoBot(ClientXMPP, BasePlugin):
                     if len(my_contacts)==0:
                         print('NO TIENES AMIGOS')
                     else:
-                        print("CARGANDO TODOS LOS CONTACTOS")
+                        
                         print('\n CONTACTOS: \n')
-                    for contact in my_contacts:
-                        print('USUARIO:' + str(contact[0]) + '\tSUBSCRIPTION:' + str(contact[1]) )
+                        for contact in my_contacts:
+                            #print(str(type(contact)))
+                            if (str(type(contact)) == "<class 'list'>" ):
+                                print('USUARIO: ' + str(contact[0]) + '\tESTADO: ' + str(contact[2]) )
+                                print('-------------------------------------------------------------' )
                 else:
                     print('\n\n')
                     print("CARGANDO CONTACTO SELECCIONADO")
                     for contact in my_contacts:
                         if(contact[0]==self .user):
-                            print('USUARIO:' + str(contact[0]) + '\tSUBSCRIPTION:' + str(contact[1]) + '\n\tSTATUS:'  + '\n\tUSERNAME:' + str(contact[3]) + '\n\tPRIORITY:' + str(contact[4]))
+                            #print(contact)
+                            print('USUARIO:' + str(contact[0]) + '\tESTADO: ' + str(contact[2]))
+                            print('-------------------------------------------------------------' )
             else:
                 for JID in self.contacts:
                     self.notification_(JID, self.message, 'active')
 
+            self.disconnect()
+            print('\n\n')
+        
+        elif(self.actionSelected == "6"):
+            print("ENTRO A AGREGAR AMIGO")
+            self.send_presence()
+            await self.get_roster()
+            try:
+                print("ENTRO A AGREGAR AMIGO")
+                self.send_presence_subscription(pto=self.user) 
+                print("ENTRO A AGREGAR AMIGO")
+            except IqTimeout:
+                print("404 CAYÓ HORRIBLE LA CONEXIÓN MANO") 
             self.disconnect()
             print('\n\n')
         
@@ -292,6 +305,16 @@ def showUser ():
     xmpp.connect()
     xmpp.process(forever=False)
 
+def addContact ():
+    contact = input("Usuario de futuro amigo (name@alumchat.xyz)>>> ") 
+    xmpp = EchoBot(user, psswrd, "6", user = contact)
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0045') # Mulit-User Chat (MUC)
+    xmpp.register_plugin('xep_0096') # Jabber Search
+    xmpp.connect()
+    xmpp.process(forever=False)
+
 
 if __name__ == '__main__':
     # Setup the command line arguments.
@@ -320,7 +343,10 @@ if __name__ == '__main__':
     user = ""
     psswrd = ""
     opcion = "Z"
+    print("""       ESTE ES EL CHAT XMPP DE MARÍA INÉS VÁSQUEZ FIGUEROA 18250""")
+    print("""       ---------------------------------------------------------""")
     while opcion != "s":
+        
         opcion = input("""
                         a: CREAR CUENTA
                         b: INICIO SESIÓN
@@ -330,6 +356,7 @@ if __name__ == '__main__':
                         f: ENVIAR MENSAJE
                         g: CHAT
                         h: MOSTRAR INFO DE UN CONTACTO
+                        i: AGREGAR USUARIO COMO CONTACTO
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -365,5 +392,7 @@ if __name__ == '__main__':
             showUsers()
         elif (opcion == "h"):
             showUser()
+        elif (opcion == "i"):
+            addContact()
 
             
