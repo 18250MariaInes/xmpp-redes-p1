@@ -12,12 +12,10 @@ from slixmpp.xmlstream import StanzaBase, ET
 from slixmpp.plugins import BasePlugin, register_plugin
 from slixmpp import ClientXMPP
 
-"""if sys.platform == 'win32' and sys.version_info >= (3, 8):
-     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())"""
-
-# Done...
 
 
+#Class to establish conection with server to initialize chat
+#It executes different function depending of the action selected by the user
 class EchoBot(ClientXMPP, BasePlugin):
 
     def __init__(self, jid, password, actionSelected, recipient ="", msg="", user=None, show=True):
@@ -32,9 +30,8 @@ class EchoBot(ClientXMPP, BasePlugin):
         # and the XML streams are ready for use. We want to
         # listen for this event so that we we can initialize
         # our roster.
-        print("----------------"+actionSelected)
         if (actionSelected == "4" or actionSelected == "5"):
-            print("CARGANDO TODOS LOS CONTACTOS")
+            print("CARGANDO AGENDA DE CONTACTOS")
             #self.add_event_handler("contacts", self.contacts)
             self.presences = threading.Event()
             self.contacts = []
@@ -57,13 +54,14 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.add_event_handler("message", self.message)
         
     async def start(self, event):
-        
+        #Log in to server
         if (self.actionSelected == "1"):
             #self.send_presence('chat', 'Ha llegado la colocha!')
             print("ENTRO AQUI IGUAL")
             self.send_presence()
             await self.get_roster()
             self.disconnect()
+        #send dm to contact
         elif (self.actionSelected == "2"):
             self.send_presence()
             await self.get_roster()
@@ -71,6 +69,7 @@ class EchoBot(ClientXMPP, BasePlugin):
                             mbody=self.msg,
                             mtype='chat')
             self.disconnect()
+        #communication with one user in a chat
         elif (self.actionSelected == "3"):
             #self.send_presence('chat', 'Ha llegado la colocha!')
             print("CHAT PRIVADO DE COMUNICACIÓN")
@@ -83,6 +82,7 @@ class EchoBot(ClientXMPP, BasePlugin):
             else:
                 msg.reply(reply).send()
             
+        #get info of one or multiple users  
         elif (self.actionSelected == "4" or self.actionSelected == "5"):
             self.send_presence()
             await self.get_roster()
@@ -103,19 +103,13 @@ class EchoBot(ClientXMPP, BasePlugin):
                     conexions = self.client_roster.presence(user)
                     username = self.client_roster[user]['name'] 
                     for answer, pres in conexions.items():
-                        if pres['show']:
-                            show = pres['show']
                         if pres['status']:
                             status = pres['status']
-                        if pres['priority']:
-                            status = pres['priority']
 
                     my_contacts.append([
                         user,
-                        subs,
                         status,
-                        username,
-                        priority
+                        username
                     ])
                     self.contacts = my_contacts
 
@@ -127,17 +121,16 @@ class EchoBot(ClientXMPP, BasePlugin):
                         
                         print('\n CONTACTOS: \n')
                         for contact in my_contacts:
-                            #print(str(type(contact)))
+                            #print(contact)
                             if (str(type(contact)) == "<class 'list'>" ):
-                                print('USUARIO: ' + str(contact[0]) + '\tESTADO: ' + str(contact[2]) )
+                                print('USUARIO: ' + str(contact[0]) + '\tESTADO: ' + str(contact[1]) )
                                 print('-------------------------------------------------------------' )
                 else:
-                    print('\n\n')
-                    print("CARGANDO CONTACTO SELECCIONADO")
+                    print("\n CARGANDO CONTACTO SELECCIONADO: ")
                     for contact in my_contacts:
                         if(contact[0]==self .user):
                             #print(contact)
-                            print('USUARIO:' + str(contact[0]) + '\tESTADO: ' + str(contact[2]))
+                            print('USUARIO:' + str(contact[0]) + '\tESTADO: ' + str(contact[1]))
                             print('-------------------------------------------------------------' )
             else:
                 for JID in self.contacts:
@@ -146,6 +139,7 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.disconnect()
             print('\n\n')
         
+        #add contact to list of friends
         elif(self.actionSelected == "6"):
             print("ENTRO A AGREGAR AMIGO")
             self.send_presence()
@@ -198,47 +192,6 @@ class EchoBot(ClientXMPP, BasePlugin):
                 node='http://jabber.org/protocol/admin#%s' % name,
                 session=None,
                 ifrom=xmpp.JID(user))
-        '''StanzaForDelete = self.Iq()
-        StanzaForDelete['type'] = 'set'
-        StanzaForDelete['id'] = 'delete-user-1'
-        StanzaForDelete['from'] = xmpp.JID(user)
-        StanzaForDelete['to'] = "alumchat.xyz"'''
-        #StanzaForDelete.add_command(xmpp.JID(user), "http://jabber.org/protocol/admin#delete-user", "delete-user")
-        """itemStanza = ET.fromstring("<query xmlns='jabber:iq:roster'>\
-                                 <x xmlns='jabber:x:data' type='submit'>\
-                                    <field type='hidden' var='FORM_TYPE'>\
-                                        <value>jabber:iq:roster</value>\
-                                    </field>\
-                                    <field var='Username'>\
-                                        <value>1</value>\
-                                    </field>\
-                                    <field var='search'>\
-                                        <value>*</value>\
-                                    </field>\
-                                    <field var='Name'>\
-                                        <value>1</value>\
-                                    </field>\
-                                    <field var='Email'>\
-                                        <value>1</value>\
-                                    </field>\
-                                </x>\
-                                </query>")"""
-        """StanzaForDelete['command']['xmlns'] = "http://jabber.org/protocol/commands"
-        StanzaForDelete['command']['action'] = 'execute'
-        StanzaForDelete['command']['node'] = 'http://jabber.org/protocol/admin#delete-user'"""
-        #StanzaForDelete['register']['remove'] = "True"
-        #try:
-        #StanzaForDelete.append(itemStanza)
-        #print(StanzaForDelete)
-        #print("*************************")
-        #print(itemStanza)
-        #StanzaForDelete.send()
-        #print("Account deleted succesfuly")
-        """except IqError as e:
-            raise Exception("We could not Delete the account", e)
-            sys.exit(1)
-        except IqTimeout:
-            raise Exception("Server redes2020.xyz not responding")"""
 
 def registerNewUser(user, passw):
     usuario = user
@@ -253,6 +206,9 @@ def registerNewUser(user, passw):
         return False       
 
 
+#FUNCTION THAT INSTANTIATE THE ECHOBOT CLASS
+
+#Log in to server
 def login():
     print("BIENVENIDO OTRA VEZ")
     userName = input("Usuario (name@alumchat.xyz)>>> ")
@@ -270,6 +226,7 @@ def login():
     # xmpp.process(forever=True)
     #return xmpp
 
+#send direct messaje
 def mandarMensaje(userName,mssg):
     xmpp = EchoBot(user, psswrd, "2", userName, mssg)
     xmpp.register_plugin('xep_0030') # Service Discovery
@@ -277,6 +234,7 @@ def mandarMensaje(userName,mssg):
     xmpp.connect()
     xmpp.process(timeout = 5)# XMPP Ping
 
+#start chat with contact
 def chat ():
     xmpp = EchoBot(user, psswrd, "3")
     xmpp.register_plugin('xep_0030') # Service Discovery
@@ -286,6 +244,7 @@ def chat ():
     xmpp.connect()
     xmpp.process()# XMPP Ping
 
+#show all my contacts
 def showUsers ():
     xmpp = EchoBot(user, psswrd, "4")
     xmpp.register_plugin('xep_0030') # Service Discovery
@@ -295,6 +254,7 @@ def showUsers ():
     xmpp.connect()
     xmpp.process(forever=False)
 
+#show info of only one user
 def showUser ():
     contact = input("Usuario de interés (name@alumchat.xyz)>>> ") 
     xmpp = EchoBot(user, psswrd, "4", user = contact)
@@ -305,6 +265,7 @@ def showUser ():
     xmpp.connect()
     xmpp.process(forever=False)
 
+#add contact to my friend list
 def addContact ():
     contact = input("Usuario de futuro amigo (name@alumchat.xyz)>>> ") 
     xmpp = EchoBot(user, psswrd, "6", user = contact)
@@ -342,7 +303,7 @@ if __name__ == '__main__':
     cliente = None
     user = ""
     psswrd = ""
-    opcion = "Z"
+    opcion = ""
     print("""       ESTE ES EL CHAT XMPP DE MARÍA INÉS VÁSQUEZ FIGUEROA 18250""")
     print("""       ---------------------------------------------------------""")
     while opcion != "s":
