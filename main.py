@@ -42,6 +42,11 @@ class EchoBot(ClientXMPP, BasePlugin):
         if (actionSelected == "6" or actionSelected == "7"):
             self.user = user
 
+        if (actionSelected == "8"):
+            self.msg = msg
+            self.presences = threading.Event()
+            self.contacts = []
+
         """if (actionSelected == "5"):
             print("ENTRA A SHOW-CONTACT")
             self.add_event_handler("contacts", self.contacts)
@@ -173,6 +178,69 @@ class EchoBot(ClientXMPP, BasePlugin):
                 print("LA SEÑAL CAYÓ HORRIBLE MANO")
             except Exception as e:
                 print(e)  
+
+        elif(self.actionSelected == "8"):
+            print("ENTRO A MANDAR PRESENCIA")
+            self.send_presence()
+            await self.get_roster()
+            my_contacts = []
+            try:
+                #Check the roster
+                self.get_roster()
+            except IqError as e:
+                #If there is an error
+                print("Something went wrong", e)
+            except IqTimeout:
+                #Server error
+                print("THE SERVER IS NOT WITH YOU")
+            
+            #Wait for presences
+            self.presences.wait(3)
+
+            #For each client on roster
+            my_roster = self.client_roster.groups()
+            for group in my_roster:
+                for user in my_roster[group]:
+                    status = show = answer = priority = ''
+                    self.contacts.append(user)
+                    subs = self.client_roster[user]['subscription']                         #Get subscription
+                    conexions = self.client_roster.presence(user)                           
+                    username = self.client_roster[user]['name']                             #Get username
+                    for answer, pres in conexions.items():
+                        if pres['show']:
+                            show = pres['show']                                             #Get show
+                        if pres['status']:
+                            status = pres['status']                                         #Get status
+                        if pres['priority']:
+                            priority = pres['priority']                                     #Get priority
+
+                    my_contacts.append([
+                        user,
+                        subs,
+                        status,
+                        username,
+                        priority
+                    ])
+                    self.contacts = my_contacts
+            for JID in self.contacts:
+                self.presenceMessage(JID, self.msg)
+            self.disconnect()
+            print('\n\n')
+    
+    def presenceMessage(self, to, msg):
+        message = self.Message()
+        message['to'] = to
+        message['type'] = 'chat'
+        message['body'] = msg
+
+        stanza = ET.fromstring("<active xmlns='http://jabber.org/protocol/chatstates'/>")
+        
+        try:
+            message.send()
+        except IqError as e:
+            print("ALGO SALIÓ MAL MANO\n", e)
+        except IqTimeout:
+            print("LA CONEXIÓN CAYÓ HORRIBLE MANO")
         
 
     def message(self, msg):
@@ -300,31 +368,19 @@ def deleteUser(contact):
     xmpp.connect()
     xmpp.process(forever=False)
 
+def sendPresence(msg):
+    print("PARA MANDAR PRESENCIA")
+    xmpp = EchoBot(user, psswrd, "8", msg=msg)
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    xmpp.register_plugin('xep_0199') # XMPP Ping
+    xmpp.register_plugin('xep_0045') # Mulit-User Chat (MUC)
+    xmpp.register_plugin('xep_0096') # Jabber Search
+    xmpp.connect()
+    xmpp.process(forever=False)
+
 
 
 if __name__ == '__main__':
-    # Setup the command line arguments.
-    """parser = ArgumentParser(description=EchoBot.__doc__)
-
-    # Output verbosity options.
-    parser.add_argument("-q", "--quiet", help="set logging to ERROR",
-                        action="store_const", dest="loglevel",
-                        const=logging.ERROR, default=logging.INFO)
-    parser.add_argument("-d", "--debug", help="set logging to DEBUG",
-                        action="store_const", dest="loglevel",
-                        const=logging.DEBUG, default=logging.INFO)
-
-    # JID and password options.
-    parser.add_argument("-j", "--jid", dest="jid",
-                        help="JID to use")
-    parser.add_argument("-p", "--password", dest="password",
-                        help="password to use")
-
-    args = parser.parse_args()
-
-    # Setup logging.
-    logging.basicConfig(level=args.loglevel,
-                        format='%(levelname)-8s %(message)s')"""
     cliente = None
     user = ""
     psswrd = ""
@@ -343,6 +399,7 @@ if __name__ == '__main__':
                         g: CHAT
                         h: MOSTRAR INFO DE UN CONTACTO
                         i: AGREGAR USUARIO COMO CONTACTO
+                        j: MANDAR TU PRESENCIA A TUS CONTACTOS
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -363,7 +420,7 @@ if __name__ == '__main__':
             user = userName
             psswrd = passWord
         elif (opcion == "d"):
-            dec = input("¿Seguro que te quieres eliminar? Es permanente (Y/N)")
+            dec = input("¿Seguro que te quieres eliminar? Es permanente (Y/N)>>> ")
             if (dec == "Y"):
                 deleteUser(userName)
             else:
@@ -382,5 +439,8 @@ if __name__ == '__main__':
             showUser()
         elif (opcion == "i"):
             addContact()
+        elif (opcion == "j"):
+            msg = input("¿Cuál quieres que sea tu presencia?>>> ") 
+            sendPresence(msg)
 
             
