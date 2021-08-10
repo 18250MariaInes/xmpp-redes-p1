@@ -39,6 +39,9 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.show = show
             self.message = msg
 
+        if (actionSelected == "6" or actionSelected == "7"):
+            self.user = user
+
         """if (actionSelected == "5"):
             print("ENTRA A SHOW-CONTACT")
             self.add_event_handler("contacts", self.contacts)
@@ -141,25 +144,41 @@ class EchoBot(ClientXMPP, BasePlugin):
         
         #add contact to list of friends
         elif(self.actionSelected == "6"):
-            print("ENTRO A AGREGAR AMIGO")
             self.send_presence()
             await self.get_roster()
             try:
-                print("ENTRO A AGREGAR AMIGO")
                 self.send_presence_subscription(pto=self.user) 
-                print("ENTRO A AGREGAR AMIGO")
             except IqTimeout:
                 print("404 CAYÓ HORRIBLE LA CONEXIÓN MANO") 
             self.disconnect()
             print('\n\n')
+
+        #delete account
+        elif(self.actionSelected == "7"):
+            self.send_presence()
+            await self.get_roster()
+            stanza = self.Iq()
+            stanza['type'] = 'set'
+            stanza['from'] = self.user
+            fragment = ET.fromstring("<query xmlns='jabber:iq:register'><remove/></query>")
+            stanza.append(fragment)
+
+            try:
+                stanza.send()
+                print("¡TE HAS ELIMINADO DEL ALUMCHAT POR SIEMPRE!\n")
+                self.disconnect()
+            except IqError as e:
+                print("ALGO MALO PASÓ MANO", e)
+            except IqTimeout:
+                print("LA SEÑAL CAYÓ HORRIBLE MANO")
+            except Exception as e:
+                print(e)  
         
 
     def message(self, msg):
         #while (reply != "block"):
         print(str(msg['from'])+">>> "+str(msg['body']))
         reply = input("Respuesta>>> ")
-        """if (reply == "block"):
-            return True"""
         msg.reply(reply).send()
         #msg.reply("Thanks for sending\n%(body)s" % msg).send()
 
@@ -276,6 +295,12 @@ def addContact ():
     xmpp.connect()
     xmpp.process(forever=False)
 
+def deleteUser(contact):
+    xmpp = EchoBot(user, psswrd, "7", user = contact)
+    xmpp.connect()
+    xmpp.process(forever=False)
+
+
 
 if __name__ == '__main__':
     # Setup the command line arguments.
@@ -338,9 +363,11 @@ if __name__ == '__main__':
             user = userName
             psswrd = passWord
         elif (opcion == "d"):
-            userName = input(
-                "Type username please:   ")
-            cliente.deleteUser(userName)
+            dec = input("¿Seguro que te quieres eliminar? Es permanente (Y/N)")
+            if (dec == "Y"):
+                deleteUser(userName)
+            else:
+                print("Me alegro que no te vayas amig@")
         elif (opcion == "c"):
             cliente.logout()
         elif (opcion == "f"):
