@@ -18,7 +18,7 @@ from slixmpp import ClientXMPP
 #It executes different function depending of the action selected by the user
 class EchoBot(ClientXMPP, BasePlugin):
 
-    def __init__(self, jid, password, actionSelected, recipient ="", msg="", user=None, show=True):
+    def __init__(self, jid, password, actionSelected, recipient ="", msg="", user=None, show=True, grp = ""):
         ClientXMPP.__init__(self, jid, password)
         
         self.recipient = recipient
@@ -47,6 +47,12 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.presences = threading.Event()
             self.contacts = []
 
+        if (actionSelected == "9"):
+            print("aqui", actionSelected)
+            self.user = user
+            self.grp = grp
+            print("aqui")
+
         """if (actionSelected == "5"):
             print("ENTRA A SHOW-CONTACT")
             self.add_event_handler("contacts", self.contacts)
@@ -57,7 +63,8 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.message = msg"""
 
         self.add_event_handler("session_start", self.start)
-
+        if (actionSelected == "9"):
+            self.add_event_handler("groupchat_message", self.muc_message)
         if (actionSelected == "3"):
             self.add_event_handler("message", self.message)
         
@@ -226,6 +233,23 @@ class EchoBot(ClientXMPP, BasePlugin):
                 self.presenceMessage(JID, self.msg)
             self.disconnect()
             print('\n\n')
+
+        elif(self.actionSelected == "9"):
+            print("ENTRAR A GRP")
+            self.send_presence()
+            await self.get_roster()
+            try:
+                #Join room
+                self.plugin['xep_0045'].join_muc(self.grp, self.user)
+                print("TE HAN ACEPTADO EN EL GRUPO")
+                self.send_message(mto=self.grp,
+                                mbody="HOLA A TODOS Y TODAS",
+                                mtype='groupchat')
+            except IqError as e:
+                print("ALGO SALIÓ MAL MANO", e)
+            except IqTimeout:
+                print("LA SEÑAL CAYÓ HORRIBLE MANO")
+            
     
     def presenceMessage(self, to, msg):
         message = self.Message()
@@ -241,6 +265,15 @@ class EchoBot(ClientXMPP, BasePlugin):
             print("ALGO SALIÓ MAL MANO\n", e)
         except IqTimeout:
             print("LA CONEXIÓN CAYÓ HORRIBLE MANO")
+
+    def muc_message(self, msg):
+        if(str(msg['from']).split('/')[1]!=self.user):
+            print(str(msg['from']).split('/')[1] + ": " + msg['body'])
+            message = input("Respuesta >>> ")
+            self.send_message(mto=msg['from'].bare,
+                              mbody=message,
+                              mtype='groupchat')
+    
         
 
     def message(self, msg):
@@ -369,12 +402,20 @@ def deleteUser(contact):
     xmpp.process(forever=False)
 
 def sendPresence(msg):
-    print("PARA MANDAR PRESENCIA")
     xmpp = EchoBot(user, psswrd, "8", msg=msg)
     xmpp.register_plugin('xep_0030') # Service Discovery
     xmpp.register_plugin('xep_0199') # XMPP Ping
     xmpp.register_plugin('xep_0045') # Mulit-User Chat (MUC)
     xmpp.register_plugin('xep_0096') # Jabber Search
+    xmpp.connect()
+    xmpp.process(forever=False)
+
+def enterGrp(grp, name):
+    print("entra")
+    xmpp = EchoBot(user, psswrd, "9", grp = grp, user = name)
+    xmpp.register_plugin('xep_0030')
+    xmpp.register_plugin('xep_0045')
+    xmpp.register_plugin('xep_0199')
     xmpp.connect()
     xmpp.process(forever=False)
 
@@ -400,6 +441,7 @@ if __name__ == '__main__':
                         h: MOSTRAR INFO DE UN CONTACTO
                         i: AGREGAR USUARIO COMO CONTACTO
                         j: MANDAR TU PRESENCIA A TUS CONTACTOS
+                        k: ENTRAR A CONVERSACIÓN VIRTUAL
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -442,5 +484,10 @@ if __name__ == '__main__':
         elif (opcion == "j"):
             msg = input("¿Cuál quieres que sea tu presencia?>>> ") 
             sendPresence(msg)
+        elif (opcion == "k"):
+            grp = input("¿A qué grupo quieres entrar? (test@conference.alumchat.xyz) >>> ") 
+            name = input("¿Cuál quieres que sea tu pseudónimo? ")
+            enterGrp(grp,name)
+            
 
             
