@@ -35,7 +35,7 @@ $ python main.py
 - ✅ Add a user to contacts
 - ✅ Show a single user's contact details
 - ✅ 1 to 1 communication with any user / contact
-- Participate in group conversations
+- ✅ Participate in group conversations
 - ✅ Define presence message
 - Send / receive notifications
 - Send / receive files
