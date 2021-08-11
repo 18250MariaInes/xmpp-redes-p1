@@ -25,11 +25,6 @@ class EchoBot(ClientXMPP, BasePlugin):
         self.msg = msg
         self.actionSelected = actionSelected
 
-        # The session_start event will be triggered when
-        # the bot establishes its connection with the server
-        # and the XML streams are ready for use. We want to
-        # listen for this event so that we we can initialize
-        # our roster.
         if (actionSelected == "4" or actionSelected == "5"):
             print("CARGANDO AGENDA DE CONTACTOS")
             #self.add_event_handler("contacts", self.contacts)
@@ -48,23 +43,12 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.contacts = []
 
         if (actionSelected == "9"):
-            print("aqui", actionSelected)
             self.user = user
             self.grp = grp
-            print("aqui")
-
-        """if (actionSelected == "5"):
-            print("ENTRA A SHOW-CONTACT")
-            self.add_event_handler("contacts", self.contacts)
-            self.presences = threading.Event()
-            self.contacts = []
-            self.user = user
-            self.show = show
-            self.message = msg"""
 
         self.add_event_handler("session_start", self.start)
         if (actionSelected == "9"):
-            self.add_event_handler("groupchat_message", self.muc_message)
+            self.add_event_handler("groupchat_message", self.grp_message)
         if (actionSelected == "3"):
             self.add_event_handler("message", self.message)
         
@@ -76,7 +60,7 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.send_presence()
             await self.get_roster()
             self.disconnect()
-        #send dm to contact
+        #send dm to contact to only onw contact
         elif (self.actionSelected == "2"):
             self.send_presence()
             await self.get_roster()
@@ -109,6 +93,7 @@ class EchoBot(ClientXMPP, BasePlugin):
             except IqTimeout:
                 print("LA SEÑAL CAYÓ HORRIBLE MANO")
             self.presences.wait(3)
+            #get all contacts with roster
             my_roster = self.client_roster.groups()
             for group in my_roster:
                 for user in my_roster[group]:
@@ -128,6 +113,7 @@ class EchoBot(ClientXMPP, BasePlugin):
                     ])
                     self.contacts = my_contacts
 
+            #select if only want one or all the users
             if(self.show):
                 if(not self.user):
                     if len(my_contacts)==0:
@@ -186,56 +172,47 @@ class EchoBot(ClientXMPP, BasePlugin):
             except Exception as e:
                 print(e)  
 
+        #send
         elif(self.actionSelected == "8"):
-            print("ENTRO A MANDAR PRESENCIA")
             self.send_presence()
             await self.get_roster()
+            #for getting users of roster
             my_contacts = []
             try:
-                #Check the roster
                 self.get_roster()
             except IqError as e:
-                #If there is an error
-                print("Something went wrong", e)
+                print("ALGO MALO PASÓ MANO", e)
             except IqTimeout:
-                #Server error
-                print("THE SERVER IS NOT WITH YOU")
-            
-            #Wait for presences
+                print("LA SEÑAL CAYÓ HORRIBLE MANO")
+
             self.presences.wait(3)
 
-            #For each client on roster
             my_roster = self.client_roster.groups()
             for group in my_roster:
                 for user in my_roster[group]:
                     status = show = answer = priority = ''
                     self.contacts.append(user)
-                    subs = self.client_roster[user]['subscription']                         #Get subscription
+                    subs = self.client_roster[user]['subscription']                         
                     conexions = self.client_roster.presence(user)                           
-                    username = self.client_roster[user]['name']                             #Get username
-                    for answer, pres in conexions.items():
-                        if pres['show']:
-                            show = pres['show']                                             #Get show
+                    username = self.client_roster[user]['name']                             
+                    for answer, pres in conexions.items():                                          
                         if pres['status']:
-                            status = pres['status']                                         #Get status
-                        if pres['priority']:
-                            priority = pres['priority']                                     #Get priority
+                            status = pres['status']                                   
 
                     my_contacts.append([
                         user,
-                        subs,
                         status,
-                        username,
-                        priority
+                        username
                     ])
                     self.contacts = my_contacts
+            #for every user send presence message
             for JID in self.contacts:
                 self.presenceMessage(JID, self.msg)
             self.disconnect()
             print('\n\n')
 
+        #join group conversation
         elif(self.actionSelected == "9"):
-            print("ENTRAR A GRP")
             self.send_presence()
             await self.get_roster()
             try:
@@ -250,7 +227,7 @@ class EchoBot(ClientXMPP, BasePlugin):
             except IqTimeout:
                 print("LA SEÑAL CAYÓ HORRIBLE MANO")
             
-    
+    #SEND PRESENCE TO ALL OF MY CONTACT
     def presenceMessage(self, to, msg):
         message = self.Message()
         message['to'] = to
@@ -266,7 +243,8 @@ class EchoBot(ClientXMPP, BasePlugin):
         except IqTimeout:
             print("LA CONEXIÓN CAYÓ HORRIBLE MANO")
 
-    def muc_message(self, msg):
+    #TALK IN A GROUP CONVERSATION
+    def grp_message(self, msg):
         if(str(msg['from']).split('/')[1]!=self.user):
             print(str(msg['from']).split('/')[1] + ": " + msg['body'])
             message = input("Respuesta >>> ")
@@ -337,14 +315,7 @@ def login():
     psswrd = passWord
     print("-----------------")
     print(user, psswrd)
-    """xmpp = EchoBot(userName, passWord, "1")
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0199') 
-    xmpp.connect()
-    xmpp.process(timeout = 10)"""
     print("USUARIO LOGGEADO")
-    # xmpp.process(forever=True)
-    #return xmpp
 
 #send direct messaje
 def mandarMensaje(userName,mssg):
@@ -396,11 +367,13 @@ def addContact ():
     xmpp.connect()
     xmpp.process(forever=False)
 
+#delete user from the server
 def deleteUser(contact):
     xmpp = EchoBot(user, psswrd, "7", user = contact)
     xmpp.connect()
     xmpp.process(forever=False)
 
+#send presence to all of your friends
 def sendPresence(msg):
     xmpp = EchoBot(user, psswrd, "8", msg=msg)
     xmpp.register_plugin('xep_0030') # Service Discovery
@@ -410,8 +383,8 @@ def sendPresence(msg):
     xmpp.connect()
     xmpp.process(forever=False)
 
+#enter a group conversation with friends
 def enterGrp(grp, name):
-    print("entra")
     xmpp = EchoBot(user, psswrd, "9", grp = grp, user = name)
     xmpp.register_plugin('xep_0030')
     xmpp.register_plugin('xep_0045')
@@ -419,10 +392,14 @@ def enterGrp(grp, name):
     xmpp.connect()
     xmpp.process(forever=False)
 
+def logout(client):
+    print("ADIÓS AMIG@. ESPERO REGRESES")
+    exit()
 
 
+#MAIN (WHERE THE ACTION HAPPENS)
 if __name__ == '__main__':
-    cliente = None
+    client = None
     user = ""
     psswrd = ""
     opcion = ""
@@ -441,7 +418,7 @@ if __name__ == '__main__':
                         h: MOSTRAR INFO DE UN CONTACTO
                         i: AGREGAR USUARIO COMO CONTACTO
                         j: MANDAR TU PRESENCIA A TUS CONTACTOS
-                        k: ENTRAR A CONVERSACIÓN VIRTUAL
+                        k: ENTRAR A CONVERSACIÓN GRUPAL
                         s: SALIR
                         INGRESA LA ACCIÓN QUE DESEAS HACER>>> """)
         if (opcion == "a"):
@@ -468,7 +445,7 @@ if __name__ == '__main__':
             else:
                 print("Me alegro que no te vayas amig@")
         elif (opcion == "c"):
-            cliente.logout()
+            logout(client)
         elif (opcion == "f"):
             userName = input("Destinatario (name@alumchat.xyz)>>> ")
             mssg = input("Mensaje>>> ")
