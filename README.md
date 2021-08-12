@@ -41,4 +41,4 @@ $ python main.py
 - Send / receive files
 
 ### Video of project result:
-VIDEO:TODO
+https://www.youtube.com/watch?v=aUqaXOLVyjQ
