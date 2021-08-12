@@ -10,6 +10,7 @@ Welcome to María Inés Vásquez chat project Redes 2021
 
 - Python 3.7.3
 - Slixmpp
+- xmpppy
 
 ```shell
 $ pip install slixmpp
