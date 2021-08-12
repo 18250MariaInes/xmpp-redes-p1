@@ -13,6 +13,7 @@ Welcome to María Inés Vásquez chat project Redes 2021
 
 ```shell
 $ pip install slixmpp
+$ pip install xmpppy
 ```
 - Test User: mvasquez@alumchat.xyz password: 123*
 
