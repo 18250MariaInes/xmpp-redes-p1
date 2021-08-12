@@ -4,7 +4,6 @@ Redes
 Proyecto 1"""
 import sys
 import aiodns
-#import asyncio
 import threading
 import logging
 import xmpp
@@ -51,6 +50,11 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.add_event_handler("groupchat_message", self.grp_message)
         if (actionSelected == "3"):
             self.add_event_handler("message", self.message)
+            self.add_event_handler("chatstate_active", self.notiactive)
+            self.add_event_handler("chatstate_inactive", self.notinactive)
+            self.add_event_handler("chatstate_composing", self.notityping)
+            self.add_event_handler("chatstate_paused", self.notipaused)
+            self.add_event_handler("chatstate_gone", self.notigone)
         
     async def start(self, event):
         #Log in to server
@@ -64,10 +68,40 @@ class EchoBot(ClientXMPP, BasePlugin):
         elif (self.actionSelected == "2"):
             self.send_presence()
             await self.get_roster()
+            msg = self.make_message(
+                mto=self.recipient,
+                mfrom=self.boundjid.bare,
+                mtype='chat'
+            )
+
+            msg['chat_state'] = 'composing'
+            msg.send()
+
             self.send_message(mto=self.recipient,
                             mbody=self.msg,
                             mtype='chat')
+            msg = self.make_message(
+                mto=self.recipient,
+                mfrom=self.boundjid.bare,
+                mtype='chat'
+            )
+
+            msg['chat_state'] = 'paused'
+            msg.send()
+
+            self.send_message(mto=self.recipient,
+                            mbody=self.msg,
+                            mtype='chat')
+            msg = self.make_message(
+                mto=self.recipient,
+                mfrom=self.boundjid.bare,
+                mtype='chat'
+            )
+
+            msg['chat_state'] = 'gone'
+            msg.send()
             self.disconnect()
+
         #communication with one user in a chat
         elif (self.actionSelected == "3"):
             #self.send_presence('chat', 'Ha llegado la colocha!')
@@ -80,6 +114,7 @@ class EchoBot(ClientXMPP, BasePlugin):
                 self.disconnect()
             else:
                 msg.reply(reply).send()
+                
             
         #get info of one or multiple users  
         elif (self.actionSelected == "4" or self.actionSelected == "5"):
@@ -251,8 +286,23 @@ class EchoBot(ClientXMPP, BasePlugin):
             self.send_message(mto=msg['from'].bare,
                               mbody=message,
                               mtype='groupchat')
-    
-        
+
+    #GET MOTIFICATIONS FROM USERS IN LIVE CHAT
+    def notigone(self, chatstate):
+        print("NOTIFICACION>>> "+str(chatstate["from"])+ " is gone")
+
+    def notinactive(self, chatstate):
+        print("NOTIFICACION>>> "+str(chatstate["from"])+ " is inactive")
+
+    def notiactive(self, chatstate):
+        print("NOTIFICACION>>> "+str(chatstate["from"])+ " is active")
+
+    def notipaused(self, chatstate):
+        print("NOTIFICACION>>> "+str(chatstate["from"])+ " stopped typing")
+
+    def notityping(self, chatstate):
+        print("NOTIFICACION>>> "+str(chatstate["from"])+ " is typing...")
+
 
     def message(self, msg):
         #while (reply != "block"):
@@ -322,6 +372,7 @@ def mandarMensaje(userName,mssg):
     xmpp = EchoBot(user, psswrd, "2", userName, mssg)
     xmpp.register_plugin('xep_0030') # Service Discovery
     xmpp.register_plugin('xep_0199') 
+    xmpp.register_plugin('xep_0085') # Chat State Notifications
     xmpp.connect()
     xmpp.process(timeout = 5)# XMPP Ping
 
@@ -332,6 +383,7 @@ def chat ():
     xmpp.register_plugin('xep_0004') # Data Forms
     xmpp.register_plugin('xep_0060') # PubSub
     xmpp.register_plugin('xep_0199')
+    xmpp.register_plugin('xep_0085') # Chat State Notifications
     xmpp.connect()
     xmpp.process()# XMPP Ping
 
@@ -463,7 +515,7 @@ if __name__ == '__main__':
             sendPresence(msg)
         elif (opcion == "k"):
             grp = input("¿A qué grupo quieres entrar? (test@conference.alumchat.xyz) >>> ") 
-            name = input("¿Cuál quieres que sea tu pseudónimo? ")
+            name = input("¿Cuál quieres que sea tu pseudónimo? >>> ")
             enterGrp(grp,name)
             
 
