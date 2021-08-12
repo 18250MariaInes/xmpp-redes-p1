@@ -39,7 +39,7 @@ $ python main.py
 - ✅ Participate in group conversations
 - ✅ Define presence message
 - Send / receive notifications
-- Send / receive files
+- ✅ Send / receive files
 
 ### Video of project result:
 https://www.youtube.com/watch?v=aUqaXOLVyjQ
