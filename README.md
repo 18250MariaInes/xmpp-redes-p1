@@ -38,7 +38,6 @@ $ python main.py
 - ✅ 1 to 1 communication with any user / contact
 - ✅ Participate in group conversations
 - ✅ Define presence message
-- Send / receive notifications
 - ✅ Send / receive files
 
 ### Video of project result:
