@@ -16,6 +16,7 @@ $ pip install slixmpp
 $ pip install xmpppy
 ```
 - Test User: mvasquez@alumchat.xyz password: 123*
+- Test Group Chat: test@conference.alumchat.xyz
 
 ### Run in terminal with
 
